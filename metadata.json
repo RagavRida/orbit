@@ -1,0 +1,5 @@
+{
+  "name": "Orbit",
+  "description": "Interactive 3D startup radio globe. Spin the world, hear the stories.",
+  "requestFramePermissions": ["microphone"]
+}

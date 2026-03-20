@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #050510;
+  color: white;
+  overflow: hidden;
+}
+
+.globe-marker {
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+  pointer-events: auto;
+  z-index: 100;
+}
+
+.globe-marker:hover {
+  transform: scale(1.5);
+  z-index: 1000;
+  box-shadow: 0 0 20px currentColor;
+}
+
+/* Custom scrollbar for info modal if needed */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
