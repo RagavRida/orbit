@@ -25,11 +25,11 @@ export const INDUSTRY_COLORS: Record<string, string> = {
 };
 
 export const INDUSTRY_VOICES: Record<string, string> = {
-  AI: "Zephyr",
-  Fintech: "Fenrir",
-  Health: "Kore",
-  SaaS: "Puck",
-  Consumer: "Charon",
-  Climate: "Zephyr",
-  Other: "Kore",
+  AI: "pNInz6obpgDQGcFmaJgB",
+  Fintech: "VR6AewLTigWG4xSOukaG",
+  Health: "EXAVITQu4vr4xnSDxMaL",
+  SaaS: "onwK4e9ZLuTAKqWW03F9",
+  Consumer: "N2lVS1w4EtoT3dr4eOWO",
+  Climate: "t0jbNlBVZ17f02VDIeMI",
+  Other: "pNInz6obpgDQGcFmaJgB",
 };
