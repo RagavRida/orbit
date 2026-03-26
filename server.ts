@@ -1463,43 +1463,84 @@ Answer the caller's question using the web data above when available, and your g
 
     try {
       let pricingContent = "";
-      if (firecrawlKey) {
+
+      // Initialize MCP client if needed
+      const client = await getFirecrawlMcpClient();
+
+      if (client) {
+        // Step 1: MCP firecrawl_scrape — scrape the pricing page
+        const pricingUrls = [
+          `https://${domain}/pricing`,
+          `https://${domain}/plans`,
+          `https://${domain}/pricing-calculator`,
+        ];
+
+        for (const url of pricingUrls) {
+          if (pricingContent.length > 200) break;
+          try {
+            console.log(`[Pricing] MCP firecrawl_scrape: ${url}`);
+            const scrapeResult = await client.callTool({
+              name: "firecrawl_scrape",
+              arguments: { url },
+            });
+            const text = typeof scrapeResult.content === "string"
+              ? scrapeResult.content
+              : (scrapeResult.content as any[])?.map((c: any) => c.text || "").join("\n");
+            if (text && text.length > 200) {
+              pricingContent = text.substring(0, 5000);
+              console.log(`[Pricing] MCP scrape got ${pricingContent.length} chars from ${url}`);
+            }
+          } catch (e) { console.warn(`[Pricing] MCP scrape failed for ${url}:`, e); }
+        }
+
+        // Step 2: MCP firecrawl_search — fallback if scrape didn't find pricing
+        if (pricingContent.length < 200) {
+          try {
+            console.log(`[Pricing] MCP firecrawl_search: ${name} pricing`);
+            const searchResult = await client.callTool({
+              name: "firecrawl_search",
+              arguments: { query: `${name} pricing plans tiers cost features per month annual`, limit: 5 },
+            });
+            const searchText = typeof searchResult.content === "string"
+              ? searchResult.content
+              : (searchResult.content as any[])?.map((c: any) => c.text || "").join("\n");
+            if (searchText && searchText.length > 100) {
+              pricingContent = `SEARCH RESULTS for ${name} pricing:\n${searchText.substring(0, 5000)}`;
+              console.log(`[Pricing] MCP search got ${pricingContent.length} chars`);
+            }
+          } catch (e) { console.warn("[Pricing] MCP search error:", e); }
+        }
+
+        // Step 3: Bonus — try a targeted search for "site:domain pricing" if still empty
+        if (pricingContent.length < 200) {
+          try {
+            console.log(`[Pricing] MCP firecrawl_search: site-specific pricing`);
+            const siteSearch = await client.callTool({
+              name: "firecrawl_search",
+              arguments: { query: `site:${domain} pricing OR plans OR cost`, limit: 3 },
+            });
+            const siteText = typeof siteSearch.content === "string"
+              ? siteSearch.content
+              : (siteSearch.content as any[])?.map((c: any) => c.text || "").join("\n");
+            if (siteText && siteText.length > 100) {
+              pricingContent = `SITE SEARCH for ${domain} pricing:\n${siteText.substring(0, 5000)}`;
+              console.log(`[Pricing] MCP site search got ${pricingContent.length} chars`);
+            }
+          } catch (e) { console.warn("[Pricing] MCP site search error:", e); }
+        }
+      } else if (firecrawlKey) {
+        // Direct API fallback if MCP unavailable
         try {
           const scrapeRes = await fetch("https://api.firecrawl.dev/v1/scrape", {
             method: "POST",
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${firecrawlKey}` },
-            body: JSON.stringify({
-              url: `https://${domain}/pricing`,
-              formats: ["markdown", {
-                type: "json",
-                prompt: "Extract all pricing tiers with plan name, price, billing period, and features",
-                schema: {
-                  type: "object",
-                  properties: {
-                    tiers: { type: "array", items: { type: "object", properties: {
-                      name: { type: "string" }, price: { type: "string" },
-                      period: { type: "string" }, features: { type: "array", items: { type: "string" } },
-                    }}},
-                    freeTrialAvailable: { type: "boolean" },
-                  },
-                },
-              }],
-              waitFor: 3000,
-              timeout: 20000,
-              actions: [
-                { type: "scroll", direction: "down" },
-                { type: "wait", milliseconds: 1000 },
-              ],
-            }),
+            body: JSON.stringify({ url: `https://${domain}/pricing`, formats: ["markdown"], waitFor: 5000, timeout: 30000 }),
           });
           if (scrapeRes.ok) {
             const d = await scrapeRes.json();
-            pricingContent = (d.data?.markdown || "").substring(0, 3000);
-            if (d.data?.json?.tiers?.length) {
-              pricingContent += `\n\nEXTRACTED: ${JSON.stringify(d.data.json)}`;
-            }
+            pricingContent = (d.data?.markdown || "").substring(0, 5000);
           }
-        } catch (e) { console.warn("[Pricing] Scrape error:", e); }
+        } catch (e) { console.warn("[Pricing] Direct scrape error:", e); }
       }
 
       if (!openrouterKey) return res.json({ hasPricing: false, tiers: [], summary: "AI not configured" });
